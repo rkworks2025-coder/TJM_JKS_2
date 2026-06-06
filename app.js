@@ -612,7 +612,7 @@ function buildTimeline(timeline, getTime) {
 
 const TIRE_APP_URL = 'https://rkworks2025-coder.github.io/TireCheck/';
 const WORK_APP_URL = 'https://rkworks2025-coder.github.io/work/';
-const JUNKAI_GAS_URL = 'https://script.google.com/macros/s/AKfycbyXbPaarnD7mQa_rqm6mk-Os3XBH6C731aGxk7ecJC5U3XjtwfMkeF429rezkAo79jN/exec';
+const JUNKAI_GAS_URL = 'https://script.google.com/macros/s/AKfycbyhvDaXPbZQWkhGDbt2XkUZhwe2-xprpC9U_6s3JuPeXoD2fxAGsVXePvZasId5I1zUyQ/exec';
 
 // ===== 更新ボタン → yoyakuワークフローをトリガー =====
 function triggerUpdate() {
@@ -745,7 +745,7 @@ async function triggerScan() {
 }
 
 function goTireApp(plate, stationName, model) {
-  const JUNKAI_AREA_URL = `https://rkworks2025-coder.github.io/-/area.html?city=${CURRENT_AREA}`;
+  const JUNKAI_AREA_URL = `https://rkworks2025-coder.github.io/TJM_patrol/area.html?city=${CURRENT_AREA}`;
 
   // 巡回アプリ側に「この車両の点検ボタンを自動クリックして」という指示をlocalStorageで渡す
   try {
