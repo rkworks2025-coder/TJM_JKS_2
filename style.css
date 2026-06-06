@@ -196,8 +196,13 @@
     border-radius: 6px;
     overflow: hidden;
     z-index: 100;
-    cursor: pointer;
+    cursor: grab;
     backdrop-filter: blur(6px);
+    touch-action: none;
+  }
+  .minimap.dragging {
+    cursor: grabbing;
+    opacity: 0.85;
   }
 
   .minimap canvas {
