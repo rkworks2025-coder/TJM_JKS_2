@@ -764,7 +764,7 @@ async function triggerScan() {
   }, { enableHighAccuracy: true, timeout: 10000 });
 }
 
-function showToast(msg) {
+function showToast(msg, duration = 4000) {
   let toast = document.getElementById('jks2-toast');
   if (!toast) {
     toast = document.createElement('div');
@@ -774,9 +774,14 @@ function showToast(msg) {
   toast.textContent = msg;
   toast.classList.add('show');
   if (toast._timer) clearTimeout(toast._timer);
-  // タップで早期に閉じられる
-  toast.onclick = () => { toast.classList.remove('show'); };
+  toast._timer = setTimeout(() => toast.classList.remove('show'), duration);
+  // タップで早期に閉じる
+  toast.onclick = () => {
+    clearTimeout(toast._timer);
+    toast.classList.remove('show');
+  };
 }
+
 
 function goTireApp(plate, stationName, model) {
   const JUNKAI_AREA_URL = `https://rkworks2025-coder.github.io/TJM_patrol/area.html?city=${CURRENT_AREA}`;
@@ -928,6 +933,13 @@ window.addEventListener('pageshow', (e) => {
 // ===== visibilitychange: JKS-IIがフォアグラウンドに戻った時 =====
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
+
+  // トーストを閉じる
+  const toast = document.getElementById('jks2-toast');
+  if (toast) {
+    if (toast._timer) clearTimeout(toast._timer);
+    toast.classList.remove('show');
+  }
 
   // 詳細パネルが開いていれば該当ステーションのデータを再取得
   if (window._detailOpen && currentStation) {
