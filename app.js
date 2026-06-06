@@ -1014,10 +1014,53 @@ function initMinimap() {
     window._minimapResizeAdded = true;
   }
 
-  // ミニマップクリックはoldListenerを除去して再登録
+  // ミニマップのtouchstart/clickはoldListenerを除去して再登録
   const minimap = document.getElementById('minimap');
   if (minimap._clickHandler) minimap.removeEventListener('click', minimap._clickHandler);
+
+  // ドラッグ移動（タッチ）
+  if (!minimap._dragInited) {
+    minimap._dragInited = true;
+    let dragStartX, dragStartY, origLeft, origTop, isDragging = false;
+
+    minimap.addEventListener('touchstart', (e) => {
+      const touch = e.touches[0];
+      dragStartX = touch.clientX;
+      dragStartY = touch.clientY;
+      const rect = minimap.getBoundingClientRect();
+      origLeft = rect.left;
+      origTop  = rect.top;
+      isDragging = false;
+    }, { passive: true });
+
+    minimap.addEventListener('touchmove', (e) => {
+      const touch = e.touches[0];
+      const dx = touch.clientX - dragStartX;
+      const dy = touch.clientY - dragStartY;
+      if (!isDragging && Math.abs(dx) + Math.abs(dy) > 6) isDragging = true;
+      if (!isDragging) return;
+      e.stopPropagation();
+      minimap.classList.add('dragging');
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const newLeft = Math.max(0, Math.min(vw - 120, origLeft + dx));
+      const newTop  = Math.max(52, Math.min(vh - 120, origTop  + dy));
+      minimap.style.right  = 'auto';
+      minimap.style.bottom = 'auto';
+      minimap.style.left   = newLeft + 'px';
+      minimap.style.top    = newTop  + 'px';
+    }, { passive: true });
+
+    minimap.addEventListener('touchend', () => {
+      minimap.classList.remove('dragging');
+      // ドラッグ中だった場合はclickを発火させない
+      minimap._wasDragged = isDragging;
+      isDragging = false;
+    }, { passive: true });
+  }
+
+  // クリックでグリッドジャンプ（ドラッグ直後は無視）
   minimap._clickHandler = (e) => {
+    if (minimap._wasDragged) { minimap._wasDragged = false; return; }
     const rect = e.currentTarget.getBoundingClientRect();
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
@@ -1029,6 +1072,7 @@ function initMinimap() {
   };
   minimap.addEventListener('click', minimap._clickHandler);
 }
+
 
 // ===== ピンチズーム・パン =====
 const mainArea    = document.getElementById('mainArea');
