@@ -470,11 +470,14 @@ function setSelfCell(q, r) {
   if (window._minimapRedraw) window._minimapRedraw(q, r);
 }
 
+const GPS_CACHE_KEY = 'jks2_gps_cache';
+
 function onGpsSuccess(pos) {
   const lat = pos.coords.latitude;
   const lng = pos.coords.longitude;
+  // localStorageにキャッシュ
+  try { localStorage.setItem(GPS_CACHE_KEY, JSON.stringify({ lat, lng })); } catch(e) {}
   const [rawQ, rawR] = latLngToAxial(lat, lng);
-  // STATIONSのq,r座標系に合わせてオフセット補正
   const q = rawQ - AXIAL_MIN_Q;
   const r = rawR - AXIAL_MIN_R;
   setSelfCell(q, r);
@@ -482,15 +485,32 @@ function onGpsSuccess(pos) {
 
 function onGpsError(err) {
   console.warn('GPS取得失敗:', err.message);
+  // キャッシュがあれば使う
+  try {
+    const cached = localStorage.getItem(GPS_CACHE_KEY);
+    if (cached) {
+      const { lat, lng } = JSON.parse(cached);
+      const [rawQ, rawR] = latLngToAxial(lat, lng);
+      const q = rawQ - AXIAL_MIN_Q;
+      const r = rawR - AXIAL_MIN_R;
+      setSelfCell(q, r);
+    }
+  } catch(e) {}
 }
 
 function startGps() {
   if (!navigator.geolocation) return;
+  // キャッシュがあれば即座に表示
+  try {
+    const cached = localStorage.getItem(GPS_CACHE_KEY);
+    if (cached) {
+      const { lat, lng } = JSON.parse(cached);
+      onGpsSuccess({ coords: { latitude: lat, longitude: lng } });
+    }
+  } catch(e) {}
+  // 1回だけ取得してキャッシュを更新（watchPositionは使わない）
   navigator.geolocation.getCurrentPosition(onGpsSuccess, onGpsError, {
     enableHighAccuracy: true, timeout: 10000
-  });
-  watchId = navigator.geolocation.watchPosition(onGpsSuccess, onGpsError, {
-    enableHighAccuracy: true, maximumAge: 30000
   });
 }
 
