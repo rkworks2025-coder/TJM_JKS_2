@@ -468,15 +468,13 @@ function clearSelfCell() {
   }
 }
 
-function setSelfCell(q, r) {
+function setSelfCell(q, r, blink = true) {
   clearSelfCell();
 
-  // q,rに対応するピクセル座標を計算
   const {x, y} = hexToPixel(q, r);
   const cx = x + offX;
   const cy = y + offY;
 
-  // グリッド上に黄色の点滅SVGを直接生成（ステーション有無に関わらず）
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('width', W + 4);
   svg.setAttribute('height', H + 4);
@@ -484,22 +482,33 @@ function setSelfCell(q, r) {
 
   const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
   path.setAttribute('d', hexPath(W/2+2, H/2+2, SIZE - 1));
-  path.setAttribute('fill', 'rgba(255,224,77,0.15)');
+  path.setAttribute('fill', blink ? 'rgba(255,224,77,0.15)' : 'rgba(255,224,77,0.08)');
   path.setAttribute('stroke', '#ffe04d');
-  path.setAttribute('stroke-width', '2.5');
+  path.setAttribute('stroke-width', blink ? '2.5' : '3');
   svg.appendChild(path);
   grid.appendChild(svg);
   selfSvgEl = svg;
 
-  // 点滅
-  let visible = true;
-  selfSvgEl._blink = setInterval(() => {
-    visible = !visible;
-    svg.style.opacity = visible ? '1' : '0.2';
-  }, 600);
+  if (blink) {
+    let visible = true;
+    selfSvgEl._blink = setInterval(() => {
+      visible = !visible;
+      svg.style.opacity = visible ? '1' : '0.2';
+    }, 600);
+  }
 
-  // ミニマップ更新
   if (window._minimapRedraw) window._minimapRedraw(q, r);
+}
+
+// 目的地ステーションのセルを黄色枠（点滅なし）で表示
+function setTargetCell(station) {
+  setSelfCell(station.q, station.r, false);
+}
+
+// GPS注意書きの表示/非表示
+function showGpsNote(show) {
+  const note = document.getElementById('gps-note');
+  if (note) note.style.display = show ? 'block' : 'none';
 }
 
 const GPS_CACHE_KEY = 'jks2_gps_cache';
@@ -507,12 +516,13 @@ const GPS_CACHE_KEY = 'jks2_gps_cache';
 function onGpsSuccess(pos) {
   const lat = pos.coords.latitude;
   const lng = pos.coords.longitude;
-  // localStorageにキャッシュ
   try { localStorage.setItem(GPS_CACHE_KEY, JSON.stringify({ lat, lng })); } catch(e) {}
+  // 詳細画面表示中はGPS点滅を更新しない（目的地表示を維持）
+  if (window._detailOpen) return;
   const [rawQ, rawR] = latLngToAxial(lat, lng);
   const q = rawQ - AXIAL_MIN_Q;
   const r = rawR - AXIAL_MIN_R;
-  setSelfCell(q, r);
+  setSelfCell(q, r, true);
 }
 
 function onGpsError(err) {
@@ -553,6 +563,10 @@ function openDetail(station) {
   currentStation = station;
   window._detailOpen = true;
   document.getElementById('detailStation').textContent = station.station_name;
+
+  // 目的地ステーションを黄色枠（点滅なし）で表示、注意書きを隠す
+  setTargetCell(station);
+  showGpsNote(false);
   document.getElementById('detailCd').textContent = `ST: ${station.stationCd} ／ ${station.total || 0}台`;
 
   const container = document.getElementById('detailVehicles');
@@ -1008,7 +1022,18 @@ function closeDetail() {
   document.getElementById('detailPanel').classList.remove('show');
   document.getElementById('overlay').classList.remove('show');
   window._detailOpen = false;
+
+  // GPS点滅に戻す・注意書き表示
+  try {
+    const cached = localStorage.getItem(GPS_CACHE_KEY);
+    if (cached) {
+      const { lat, lng } = JSON.parse(cached);
+      onGpsSuccess({ coords: { latitude: lat, longitude: lng } });
+    }
+  } catch(e) {}
+  showGpsNote(true);
 }
+
 
 function openNav() {
   if (!currentStation) return;
