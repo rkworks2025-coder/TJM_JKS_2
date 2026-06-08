@@ -158,42 +158,74 @@ async function switchArea(areaKey) {
   await fetchMapData();
 }
 
-async function fetchMapData() {
-  showLoading(true);
+const MAP_CACHE_KEY = 'jks2_map_cache';
+
+function applyMapData(stations) {
+  stations.forEach(st => gasStationMap.set(st.stationCd, st));
+  STATIONS.forEach(s => {
+    const gas = gasStationMap.get(s.stationCd);
+    s.status    = gas ? gas.status    : 'unknown';
+    s.total     = gas ? gas.total     : 0;
+    s.standby   = gas ? gas.standby   : 0;
+    s.checked   = gas ? gas.checked   : 0;
+    s.hasUrgent = gas ? gas.hasUrgent : false;
+  });
+}
+
+function renderAfterData(silent = false) {
+  renderGrid();
+  updateCounts();
+  initMinimap();
+  if (!silent) initPanZoom();
+  requestAnimationFrame(() => {
+    if (!window._gpsStarted) {
+      window._gpsStarted = true;
+      startGps();
+    } else {
+      try {
+        const cached = localStorage.getItem(GPS_CACHE_KEY);
+        if (cached) {
+          const { lat, lng } = JSON.parse(cached);
+          onGpsSuccess({ coords: { latitude: lat, longitude: lng } });
+        }
+      } catch(e) {}
+    }
+  });
+}
+
+async function fetchMapData(silent = false) {
+  if (!silent) {
+    try {
+      const cacheRaw = localStorage.getItem(MAP_CACHE_KEY + '_' + AREA_KEY());
+      if (cacheRaw) {
+        const cache = JSON.parse(cacheRaw);
+        applyMapData(cache.stations);
+        renderAfterData(false);
+        showLoading(false);
+      } else {
+        showLoading(true);
+      }
+    } catch(e) {
+      showLoading(true);
+    }
+  }
+
   try {
     const res = await fetch(`${GAS_URL}?action=getMapData&area=${AREA_KEY()}`);
     const data = await res.json();
     if (data.result !== 'OK') throw new Error(data.error || 'GASエラー');
-
-    data.stations.forEach(st => {
-      gasStationMap.set(st.stationCd, st);
-    });
-
-    STATIONS.forEach(s => {
-      const gas = gasStationMap.get(s.stationCd);
-      s.status    = gas ? gas.status    : 'unknown';
-      s.total     = gas ? gas.total     : 0;
-      s.standby   = gas ? gas.standby   : 0;
-      s.checked   = gas ? gas.checked   : 0;
-      s.hasUrgent = gas ? gas.hasUrgent : false;
-    });
-
+    try {
+      localStorage.setItem(MAP_CACHE_KEY + '_' + AREA_KEY(), JSON.stringify({ stations: data.stations, ts: Date.now() }));
+    } catch(e) {}
+    gasStationMap = new Map();
+    applyMapData(data.stations);
   } catch(err) {
     console.error('データ取得失敗:', err);
     STATIONS.forEach(s => { s.status = 'standby'; s.total = 0; });
   }
 
-  // 描画は成功・失敗どちらでも同じ順序で実行
-  renderGrid();
-  updateCounts();
-  initMinimap();
-  initPanZoom();
+  renderAfterData(silent);
   showLoading(false);
-  // グリッドDOM確定後にGPS起動（初回のみ）
-  if (!window._gpsStarted) {
-    window._gpsStarted = true;
-    startGps();
-  }
 }
 
 function showLoading(show) {
@@ -951,17 +983,17 @@ document.addEventListener('visibilitychange', () => {
         if (data.vehicles.length === 0) {
           // 全台完了 → パネルを閉じてグリッドを更新
           closeDetail();
-          fetchMapData();
+          fetchMapData(true);
         } else {
           // 残り台数あり → パネルを再描画してグリッドも更新
           renderVehicleCards(container, data.vehicles, currentStation);
-          fetchMapData();
+          fetchMapData(true);
         }
       })
       .catch(() => {});
   } else {
-    // 詳細パネルが閉じていれば全体グリッドを更新
-    fetchMapData();
+    // サイレント更新（loadingなし）
+    fetchMapData(true);
   }
 });
 
