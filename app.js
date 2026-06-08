@@ -973,6 +973,13 @@ document.addEventListener('visibilitychange', () => {
     toast.classList.remove('show');
   }
 
+  // GPS再取得（最新位置でキャッシュ更新・黄色グリッド移動）
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(onGpsSuccess, onGpsError, {
+      enableHighAccuracy: true, timeout: 10000
+    });
+  }
+
   // 詳細パネルが開いていれば該当ステーションのデータを再取得
   if (window._detailOpen && currentStation) {
     const container = document.getElementById('detailVehicles');
