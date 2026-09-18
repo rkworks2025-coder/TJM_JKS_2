@@ -3,11 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#070b12">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="JKS-II">
 <title>JKS-II</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    });
+  }
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=3">
+<link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
 
@@ -22,34 +35,20 @@
   <button id="scanBtn" class="scan-btn" onclick="triggerScan()">スキャン</button>
 </header>
 
-<div class="main" id="mainArea">
-  <div class="grid-transform" id="gridTransform">
-    <div class="hex-grid" id="hexGrid"></div>
-  </div>
+<div class="subbar">
+  <span class="subbar-label">スキャンモード:</span>
+  <button class="mode-btn active" data-mode="normal" onclick="switchScanMode('normal')">ノーマル</button>
+  <button class="mode-btn" data-mode="cluster" onclick="switchScanMode('cluster')">クラスター</button>
 </div>
+
+<div id="gmap"></div>
 
 <div id="loadingOverlay">
   <div class="loading-text">LOADING...</div>
   <div class="loading-sub">データを取得中</div>
 </div>
 
-<div class="minimap" id="minimap">
-  <canvas id="minimapCanvas"></canvas>
-  <div class="minimap-viewport" id="minimapViewport"></div>
-  <svg class="minimap-move-icon" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="8" cy="8" r="7.5" fill="none" stroke="white" stroke-width="1"/>
-    <!-- 上矢印 -->
-    <polygon points="8,2 6,5 10,5" fill="white"/>
-    <!-- 下矢印 -->
-    <polygon points="8,14 6,11 10,11" fill="white"/>
-    <!-- 左矢印 -->
-    <polygon points="2,8 5,6 5,10" fill="white"/>
-    <!-- 右矢印 -->
-    <polygon points="14,8 11,6 11,10" fill="white"/>
-  </svg>
-</div>
-
-<div id="gps-note" style="position:fixed;bottom:140px;left:50%;transform:translateX(-50%);background:rgba(7,11,18,0.75);color:rgba(255,224,77,0.8);font-size:10px;font-family:'Noto Sans JP',sans-serif;padding:3px 10px;border-radius:10px;pointer-events:none;z-index:99;white-space:nowrap;">※ 黄色点滅はおおよその位置です</div>
+<div id="gps-note">※ 黄色点滅はおおよその位置です</div>
 
 <div class="overlay" id="overlay" onclick="closeDetail()"></div>
 
@@ -61,6 +60,9 @@
   <div class="detail-vehicles" id="detailVehicles"></div>
 </div>
 
-<script src="app.js?v=3"></script>
+<div id="jks2-toast"></div>
+
+<script src="app.js?v=4"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyASRe3WrsFxd7Gw7jjCXc1vajYqF8llK_k&callback=initMap" async defer></script>
 </body>
 </html>
